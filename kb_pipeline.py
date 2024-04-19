@@ -32,7 +32,7 @@ if __name__ == '__main__':
     # save chunks to disk
 
     # for each chunk run
-    generate_embedding("sample text")
+    print(generate_embedding("sample text"))
 
     # write embeddings to vector store
 

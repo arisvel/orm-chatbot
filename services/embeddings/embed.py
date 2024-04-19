@@ -12,3 +12,5 @@ class EmbeddingService:
 def generate_embedding(text, normal=True, model_name='xlm-r-bert-base-nli-stsb-mean-tokens'):
     service = EmbeddingService(model_name)
     return service.encode(text, normal)
+
+
