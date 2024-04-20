@@ -128,7 +128,7 @@ if __name__ == '__main__':
 
     # generate_embeddings('entities.db', 'vector_index.bin')
 
-    user_prompt = "Are there any understocked items, without expected orders?"
+    user_prompt = "How do yesterday's sales compare to last Monday’s sales?"
 
     service = IndexingService()
 
@@ -152,5 +152,6 @@ if __name__ == '__main__':
     prompt_for_sql_query_request += ("Your task is to utilize all the above information that have been given to you, "
                                      "to construct a SQLite query that fetches from the database the answer that the "
                                      "user requests. Give ONLY the SQL query and nothing else.")
+
 
     print(prompt_for_sql_query_request)

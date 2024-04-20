@@ -113,3 +113,48 @@ def summarize_schema(database_path):
     # Join all table descriptions into a single string
     schema_summary = "\n".join(schema_descriptions)
     return schema_summary
+
+
+def execute_sqlite_query(db_path, query):
+    """
+    Executes an SQLite query on the specified database and returns the results.
+
+    Args:
+    db_path (str): The path to the SQLite database file.
+    query (str): The SQL query to execute.
+
+    Returns:
+    list: A list of tuples representing the rows returned by the query.
+
+    Raises:
+    Exception: If an error occurs during database connection or query execution.
+    """
+    try:
+        # Connect to the SQLite database
+        conn = sqlite3.connect(db_path)
+
+        # Create a cursor object using the cursor() method
+        cursor = conn.cursor()
+
+        # Executing the query
+        cursor.execute(query)
+
+        # Fetch all rows from the last executed statement using fetchall()
+        results = cursor.fetchall()
+
+        # Committing the changes (important if the query modifies the database)
+        conn.commit()
+
+        # Closing the connection
+        conn.close()
+
+        return results
+
+    except sqlite3.Error as e:
+        # Handle the SQLite error
+        raise Exception(f"An error occurred while executing the SQL query: {e}")
+
+    finally:
+        # Ensure the connection is closed even if an error occurs
+        if conn:
+            conn.close()
