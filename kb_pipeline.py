@@ -11,19 +11,56 @@ Author: [Your Name]
 Date: [Date of Creation]
 Version: [Version of the Script]
 """
-from services.data.oper import fetch_files, clean_data
-from services.data.store import store_files
+from services.data.oper import read_csv_to_dataframe, read_table_to_dataframe
+from services.data.store import dataframe_to_sqlite
+
 from services.embeddings.embed import generate_embedding
 
+import os
+import pandas as pd
+
+directory = "data"
+
 if __name__ == '__main__':
-    # fetch
-    data = fetch_files()
+
+    file_paths = []
+    file_names = []
+    for filename in os.listdir(directory):
+        if filename.endswith('.csv'):
+            file_path = os.path.join(directory, filename)
+            file_name = os.path.splitext(filename)[0]
+
+            file_paths.append(file_path)
+            file_names.append(file_name)
+
+    for file_path, file_name in zip(file_paths, file_names):
+        df = read_csv_to_dataframe(file_path)
+        dataframe_to_sqlite(file_name, df)
+
+    table_names = file_names
+
+    entities_df = pd.DataFrame({
+        'id': [None],
+        'entity_type': [""],
+        'entity_name': [""],
+        'entity_description': [""]
+    })
+    entities_df = entities_df.iloc[0:0]
+    for table_name in table_names:
+        df = read_table_to_dataframe(table_name)
+        for column_name, column_data in df.iteritems():
+            for item in column_data:
+                entities_df = entities_df.append({
+                    "id": None,
+                    "entity_type": "sqlite field",
+                    "entity_name": item,
+                    "entity_description": f"""is a field in "{column_name}" column in {table_name} table."""
+                })
 
     # process/clean
-    data_processed = clean_data(data)
+    # data_processed = clean_data(data)
 
     # save processed data to disk
-    store_files(data_processed)
 
     # chunk and save
 
