@@ -39,7 +39,7 @@ class IndexingService:
         self.dim = dim
         self.index = hnswlib.Index(space=space, dim=dim)
         self.index.init_index(max_elements=max_elements, ef_construction=200, M=16)
-        self.index.set_ef(800)  # Set higher for more accurate but slower search
+        self.index.set_ef(1800)  # Set higher for more accurate but slower search
 
     def add_items(self, embeddings, ids):
         self.index.add_items(embeddings, ids)

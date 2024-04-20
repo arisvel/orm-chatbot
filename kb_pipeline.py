@@ -13,7 +13,7 @@ Version: [Version of the Script]
 """
 import sqlite3
 
-from services.data.oper import read_csv_to_dataframe, read_table_to_dataframe
+from services.data.oper import read_csv_to_dataframe, read_table_to_dataframe, fetch_entity_by_id, summarize_schema
 from services.data.store import dataframe_to_sqlite, IndexingService
 
 from services.embeddings.embed import generate_embedding
@@ -126,4 +126,31 @@ if __name__ == '__main__':
 
     # create_knowledge_base(table_names)
 
-    generate_embeddings('entities.db', 'vector_index.bin')
+    # generate_embeddings('entities.db', 'vector_index.bin')
+
+    user_prompt = "Are there any understocked items, without expected orders?"
+
+    service = IndexingService()
+
+    service.load_index("vector_index.bin")
+
+    prompt_embedding = generate_embedding(user_prompt)
+    prompt_for_sql_query_request = (f"User has asked the following: {user_prompt}, and we have the following database "
+                                    f"schema:\n")
+    prompt_for_sql_query_request += summarize_schema("data_store")
+    prompt_for_sql_query_request += ("\nAlso we have fetched the following information that may or may not be relevant "
+                                     "to the user's question:\n")
+
+    labels, distances = service.query(np.array([prompt_embedding]), k=10)
+    print("Query results:", labels, distances)
+
+    for i in range(len(labels[0])):
+        label = labels[0][i]
+        info = fetch_entity_by_id("entities.db", int(label))
+        prompt_for_sql_query_request += (str(info) + "\n")
+
+    prompt_for_sql_query_request += ("Your task is to utilize all the above information that have been given to you, "
+                                     "to construct a SQLite query that fetches from the database the answer that the "
+                                     "user requests. Give ONLY the SQL query and nothing else.")
+
+    print(prompt_for_sql_query_request)
