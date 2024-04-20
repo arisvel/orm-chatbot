@@ -48,15 +48,32 @@ if __name__ == '__main__':
     entities_df = entities_df.iloc[0:0]
     for table_name in table_names:
         df = read_table_to_dataframe(table_name)
+        column_names = []
         for column_name, column_data in df.iteritems():
-            for item in column_data:
-                entities_df = entities_df.append({
-                    "id": None,
-                    "entity_type": "sqlite field",
-                    "entity_name": item,
-                    "entity_description": f"""is a field in "{column_name}" column in {table_name} table."""
-                })
+            column_names.append(column_name)
+            if entities_df[column_name].dtype == 'object' or pd.api.types.is_string_dtype(
+                    entities_df[column_name]):
+                for item in column_data:
+                    entities_df = entities_df.append({
+                        "id": None,
+                        "entity_type": "sqlite field",
+                        "entity_name": item,
+                        "entity_description": f"""is a field in "{column_name}" column in {table_name} table."""
+                    })
 
+            entities_df = entities_df.append({
+                "id": None,
+                "entity_type": "sqlite column",
+                "entity_name": column_name,
+                "entity_description": f"""is a column in "{table_name}" table and contains {entities_df["column_name"].dtype} data."""
+            })
+
+        entities_df = entities_df.append({
+            "id": None,
+            "entity_type": "sqlite table",
+            "entity_name": table_name,
+            "entity_description": f"""is a table name. It contains the following columns: {column_names}"""
+        })
     # process/clean
     # data_processed = clean_data(data)
 
