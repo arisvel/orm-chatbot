@@ -1,5 +1,7 @@
 import sqlite3
 from sqlite3 import Error
+import hnswlib
+import numpy as np
 
 
 def dataframe_to_sqlite(table_name, dataframe, db_file="data_store"):
@@ -30,3 +32,31 @@ def dataframe_to_sqlite(table_name, dataframe, db_file="data_store"):
     finally:
         if conn:
             conn.close()
+
+
+class IndexingService:
+    def __init__(self, space='cosine', dim=768, max_elements=1000):
+        self.dim = dim
+        self.index = hnswlib.Index(space=space, dim=dim)
+        self.index.init_index(max_elements=max_elements, ef_construction=200, M=16)
+        self.index.set_ef(800)  # Set higher for more accurate but slower search
+
+    def add_items(self, embeddings, ids):
+        self.index.add_items(embeddings, ids)
+
+    def save_index(self, path='hnsw_index.bin'):
+        self.index.save_index(path)
+
+    def load_index(self, path='hnsw_index.bin'):
+        self.index.load_index(path)
+
+    def query(self, queries, k=5):
+        labels, distances = self.index.knn_query(queries, k=k)
+        return labels, distances
+
+    def get_item(self, chunk_id):
+        embedding = self.index.get_items([chunk_id])
+        if embedding.size > 0:
+            return embedding[0]
+        else:
+            return None

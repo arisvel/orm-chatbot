@@ -11,18 +11,21 @@ Author: [Your Name]
 Date: [Date of Creation]
 Version: [Version of the Script]
 """
+import sqlite3
+
 from services.data.oper import read_csv_to_dataframe, read_table_to_dataframe
-from services.data.store import dataframe_to_sqlite
+from services.data.store import dataframe_to_sqlite, IndexingService
 
 from services.embeddings.embed import generate_embedding
 
 import os
 import pandas as pd
+import numpy as np
 
 directory = "data"
 
-if __name__ == '__main__':
 
+def parse_csv_and_save_to_db():
     file_paths = []
     file_names = []
     for filename in os.listdir(directory):
@@ -37,8 +40,10 @@ if __name__ == '__main__':
         df = read_csv_to_dataframe(file_path)
         dataframe_to_sqlite(file_name, df)
 
-    table_names = file_names
+    return file_names
 
+
+def create_knowledge_base(table_names):
     entities_df = pd.DataFrame({
         'id': [None],
         'entity_type': [""],
@@ -46,50 +51,79 @@ if __name__ == '__main__':
         'entity_description': [""]
     })
     entities_df = entities_df.iloc[0:0]
+    i = 1
     for table_name in table_names:
         df = read_table_to_dataframe(table_name)
         column_names = []
-        for column_name, column_data in df.iteritems():
+        for column_name, column_data in df.items():
             column_names.append(column_name)
-            if entities_df[column_name].dtype == 'object' or pd.api.types.is_string_dtype(
-                    entities_df[column_name]):
+            if df[column_name].dtype == 'object' or pd.api.types.is_string_dtype(
+                    df[column_name]):
                 for item in column_data:
-                    entities_df = entities_df.append({
-                        "id": None,
+                    entities_df = entities_df._append({
+                        "id": i,
                         "entity_type": "sqlite field",
                         "entity_name": item,
                         "entity_description": f"""is a field in "{column_name}" column in {table_name} table."""
-                    })
+                    }, ignore_index=True)
+                    i += 1
 
-            entities_df = entities_df.append({
-                "id": None,
+            entities_df = entities_df._append({
+                "id": i,
                 "entity_type": "sqlite column",
                 "entity_name": column_name,
-                "entity_description": f"""is a column in "{table_name}" table and contains {entities_df["column_name"].dtype} data."""
-            })
+                "entity_description": f"""is a column in "{table_name}" table and contains {df[column_name].dtype} data."""
+            }, ignore_index=True)
+            i += 1
 
-        entities_df = entities_df.append({
-            "id": None,
+        entities_df = entities_df._append({
+            "id": i,
             "entity_type": "sqlite table",
             "entity_name": table_name,
             "entity_description": f"""is a table name. It contains the following columns: {column_names}"""
-        })
-    # process/clean
-    # data_processed = clean_data(data)
+        }, ignore_index=True)
+        i += 1
 
-    # save processed data to disk
+    dataframe_to_sqlite("Entities", entities_df, "entities.db")
 
-    # chunk and save
 
-    # for each text chunk it and return chunks
+def generate_embeddings(database_path, index_path):
+    """
+    Generate embeddings for entities in the entities.db SQLite database and save to disk.
+    """
+    # Connect to the database
+    with sqlite3.connect(database_path) as conn:
+        cursor = conn.cursor()
+        # Fetch the id, entity_type, entity_name, and entity_description from the relevant table
+        cursor.execute("SELECT id, entity_type, entity_name, entity_description FROM entities")
+        rows = cursor.fetchall()
 
-    # save chunks to disk
+    # Generate embeddings
+    entity_ids = []
+    embeddings = []
+    count = 1
+    for entity_id, entity_type, entity_name, entity_description in rows:
+        # Concatenate the entity_type, entity_name, and entity_description
+        full_text = f"{entity_type} {entity_name} {entity_description}"
+        print(f"Generating embedding for entity {entity_id} ({count}/{len(rows)}) with full text: {full_text}")
+        if full_text.strip():  # Ensure there is text to process
+            embedding = generate_embedding(full_text)  # Assuming generate_embedding is defined elsewhere
+            embeddings.append(embedding)
+            entity_ids.append(entity_id)
 
-    # for each chunk run
-    print(generate_embedding("sample text"))
+        count += 1
 
-    # write embeddings to vector store
+    # Initialize the indexing service with the correct dimension for the embeddings
+    service = IndexingService(max_elements=1000)
+    service.add_items(np.array(embeddings), entity_ids)
 
-    # in chatizard.py interface, perform vector searches
+    # Save the index to disk
+    service.save_index(index_path)
 
-    print("hello")
+
+if __name__ == '__main__':
+    # table_names = parse_csv_and_save_to_db()
+
+    # create_knowledge_base(table_names)
+
+    generate_embeddings('entities.db', 'vector_index.bin')
