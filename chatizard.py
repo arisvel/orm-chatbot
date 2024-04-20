@@ -4,11 +4,23 @@ import streamlit as st
 import numpy as np
 import boto3
 
+from PIL import Image
 from services.data.oper import fetch_entity_by_id, summarize_schema, execute_sqlite_query
 from services.data.store import IndexingService
 from services.embeddings.embed import generate_embedding
 
-st.title("ORN Chatbot")
+icon = Image.open("data/eagle_transparent.png")
+
+col1, col2, col3 = st.columns([1, 2, 20])
+
+with col1:
+    st.image(icon, width=75)
+
+with col2:
+    st.write("")
+
+with col3:
+    st.markdown("# ORN Chatbot")
 
 service = IndexingService()
 service.load_index("vector_index.bin")
@@ -74,6 +86,7 @@ if prompt:
         if i >= 0:
             context = f"User: {st.session_state.messages[i]['content']}\nAssistant: {st.session_state.messages[i + 1]['content']}\n\n" + context
 
+    questions_list = ""
     with st.spinner('Please wait...'):
 
         prompt_embedding = generate_embedding(context + " " + prompt)
@@ -138,7 +151,7 @@ if prompt:
                 # Instructions:
                 # Utilize all the provided information to formulate three specific questions. These questions should be crafted in a way that they can be definitively answered using the given context and have a similar sqlite query like the previous to ensure query execution.
                 # Output the questions as a numbered list and ensure no additional text is included in the response.
-                # Do not refer to the query or to technical jargon like sql tables in your questions.
+                # Do NOT refer to the query or to technical jargon like sql tables in your questions.
             
                 # Example of expected output:
                 # 1. Question A
@@ -152,11 +165,10 @@ if prompt:
 
         questions_list = request_to_llm(prompt_for_relevant_questions)
 
-        assistant_message += "\n Questions you might want to explore:\n"
-        assistant_message += ("\n" + questions_list)
-
     st.session_state.messages.append({"role": "assistant", "content": assistant_message})
 
     with st.chat_message("assistant"):
 
         st.write(assistant_message)
+        st.write("Questions you might want to explore:")
+        st.write(questions_list)
