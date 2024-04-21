@@ -9,6 +9,12 @@ from services.data.oper import fetch_entity_by_id, summarize_schema, execute_sql
 from services.data.store import IndexingService
 from services.embeddings.embed import generate_embedding
 
+from dotenv import load_dotenv
+
+import os
+
+load_dotenv()
+
 icon = Image.open("data/eagle_transparent.png")
 
 col1, col2, col3 = st.columns([1, 2, 20])
@@ -25,8 +31,9 @@ with col3:
 service = IndexingService()
 service.load_index("vector_index.bin")
 
-bedrock_client = boto3.client('bedrock-runtime', aws_access_key_id="AKIAT5V6ZRRFALRQPQAK", region_name="us-west-2",
-                              aws_secret_access_key="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")
+bedrock_client = boto3.client('bedrock-runtime', aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+                              region_name=os.getenv("AWS_DEFAULT_REGION"),
+                              aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"))
 
 
 def request_to_llm(prompt):
